@@ -73,21 +73,15 @@ jobs:
             out/pyxis-esp.img
           mcopy -i out/pyxis-esp.img -s out/boot/esp/* ::/
 
-          ls -lh out/pyxis-esp.img
-
-          echo "=== Assembling uefi.img for Mi 9 Lite ==="
-          mkdir -p out/firmware
-          curl -sL -o /tmp/mkbootimg.py https://raw.githubusercontent.com/aosp-mirror/platform_system_tools_mkbootimg/master/mkbootimg.py
-          gzip -c dts/pyxis.dtb > out/firmware/uefi-payload.gz
-          touch /tmp/empty-ramdisk.cpio
-          python3 /tmp/mkbootimg.py --kernel out/firmware/uefi-payload.gz --ramdisk /tmp/empty-ramdisk.cpio --base 0x80000000 --kernel_offset 0x00008000 --ramdisk_offset 0x01000000 --tags_offset 0x00000100 --pagesize 4096 --header_version 1 -o out/uefi.img
           ls -lh out/uefi.img
+            out/pyxis-esp.img
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pyxis-boot-package
           path: |
+            out/uefi.img
             out/pyxis-esp.img
             board.toml
             configs/pyxis_defconfig
@@ -97,3 +91,21 @@ jobs:
             dts/pyxis.dtb
             edk2-platform/pyxis/pyxis.dsc
             edk2-platform/pyxis/pyxis.fdf
+
+      - name: Assemble UEFI Fastboot Image (uefi.img)
+        run: |
+          mkdir -p out/firmware
+          curl -sL -o /tmp/mkbootimg.py https://raw.githubusercontent.com/aosp-mirror/platform_system_tools_mkbootimg/master/mkbootimg.py
+          gzip -c dts/pyxis.dtb > out/firmware/uefi-payload.gz
+          touch /tmp/empty-ramdisk.cpio
+          python3 /tmp/mkbootimg.py \
+            --kernel out/firmware/uefi-payload.gz \
+            --ramdisk /tmp/empty-ramdisk.cpio \
+            --base 0x80000000 \
+            --kernel_offset 0x00008000 \
+            --ramdisk_offset 0x01000000 \
+            --tags_offset 0x00000100 \
+            --pagesize 4096 \
+            --header_version 1 \
+            -o out/uefi.img
+          ls -lh out/uefi.img
