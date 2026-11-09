@@ -13,6 +13,23 @@
 "last_lba" = 64007162
 "lba_bytes" = 4096
 
+["display"]
+"width" = 1080
+"height" = 2340
+"bpp" = 32
+"orientation" = 0
+
+["touch"]
+"controller" = "focaltech"
+"i2c_address" = 0x38
+"reset_gpio" = 5
+"irq_gpio" = 125
+"max_touches" = 10
+
+["gpu"]
+"model" = "Adreno616"
+"driver" = "GopFramebuffer" # Initial bringup via linear framebuffer
+
 ["kernel"]
 "defconfig" = "pyxis_defconfig"
 "config_fragments" = ["arch:configs/common.config", "os:configs/ios.config"]
@@ -29,7 +46,7 @@
 "title" = "UniXNU-Darwin"
 "dram_base" = "0x80000000"
 "dram_size" = "0x180000000" # 6 GB
-"kernel_args" = ["-v", "serial=3", "debug=0x14e", "slide=0", "armcpu-spi-ipi=1", "-no_slto_panic"]
+"kernel_args" = ["-v", "serial=3", "debug=0x14e", "slide=0", "armcpu-spi-ipi=1", "-no_slto_panic", "native-ram-root=1", "pyxis-touch=1", "pyxis-display=1080x2340"]
 
 ["adt"."chosen"]
 "firmware-version" = "UniXNU-Pyxis-0.1"
@@ -45,3 +62,13 @@
 "compatible" = "qcom,geni-debug-uart"
 ["adt"."serial"."u64"]
 "reg" = [0x008C0000, 0x6000]
+
+["adt"."touch"]
+["adt"."touch"."string"]
+"compatible" = "focaltech,focal"
+["adt"."touch"."u32"]
+"i2c-addr" = 0x38
+"irq-gpio" = 125
+"reset-gpio" = 5
+"width" = 1080
+"height" = 2340

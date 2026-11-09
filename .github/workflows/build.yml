@@ -1,4 +1,4 @@
-name: Build UniXNU-pyxis Boot Package & Kernel Specs
+name: Build UniXNU-pyxis Boot Package & Drivers
 
 on:
   push:
@@ -41,7 +41,6 @@ jobs:
         run: |
           echo "=== Creating and packing sparse rootfs ramdisk ==="
           mkdir -p out/boot/esp/root
-          # Generate base placeholder rootfs (sparse)
           dd if=/dev/zero of=out/rootfs.img bs=1M count=32
           python3 scripts/pack_ramdisk.py out/rootfs.img -o out/boot/esp/root/ramdisk.packed
           ls -lh out/boot/esp/root/ramdisk.packed
@@ -60,7 +59,7 @@ jobs:
           name = "darwin"
           title = "Darwin / XNU (iOS 16.5)"
           loader = "DarwinBoot.efi"
-          args = "-v serial=3 debug=0x14e armcpu-spi-ipi=1 -no_slto_panic native-ram-root=1"
+          args = "-v serial=3 debug=0x14e armcpu-spi-ipi=1 -no_slto_panic native-ram-root=1 pyxis-touch=1"
           dtb = "pyxis.dtb"
           ramdisk = "root/ramdisk.packed"
           EOF
@@ -84,6 +83,7 @@ jobs:
             board.toml
             configs/pyxis_defconfig
             patches/
+            drivers/
             scripts/pack_ramdisk.py
             dts/pyxis.dtb
             edk2-platform/pyxis/pyxis.dsc
