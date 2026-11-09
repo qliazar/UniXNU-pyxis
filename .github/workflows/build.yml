@@ -1,0 +1,61 @@
+name: Build UniXNU-pyxis Boot Package
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout UniXNU-pyxis
+        uses: actions/checkout@v4
+
+      - name: Set up build tools and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu device-tree-compiler mtools dosfstools python3 python3-pip
+
+      - name: Inspect Device Tree & Environment
+        run: |
+          echo "=== Decompiling and verifying DTB ==="
+          dtc -I dtb -O dts -o dts/verified_pyxis.dts dts/pyxis.dtb
+          echo "DTS size: $(wc -c < dts/verified_pyxis.dts) bytes"
+          echo "Board configuration:"
+          cat board.toml
+
+      - name: Build Boot Payload & FAT32 Image
+        run: |
+          mkdir -p out/boot/esp
+          # Create ESP structure for UniXNU / DarwinBoot
+          cat << 'EOF' > out/boot/esp/unixnu.toml
+          title = "UniXNU Xiaomi Mi 9 Lite (pyxis)"
+          default = "darwin"
+          timeout = 3
+
+          [[entry]]
+          name = "darwin"
+          title = "Darwin / XNU (iOS 16.5)"
+          loader = "DarwinBoot.efi"
+          args = "-v serial=3 debug=0x14e armcpu-spi-ipi=1 -no_slto_panic"
+          EOF
+
+          # Copy DTB into boot payload
+          cp dts/pyxis.dtb out/boot/esp/pyxis.dtb
+
+          # Generate 128MB FAT32 ESP payload image
+          dd if=/dev/zero of=out/pyxis-esp.img bs=1M count=128
+          mkfs.vfat -F 32 -n "PYXISESP" out/pyxis-esp.img
+          mcopy -i out/pyxis-esp.img -s out/boot/esp/* ::/
+
+          ls -lh out/pyxis-esp.img
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyxis-boot-payload
+          path: |
+            out/pyxis-esp.img
+            board.toml
+            dts/pyxis.dtb
