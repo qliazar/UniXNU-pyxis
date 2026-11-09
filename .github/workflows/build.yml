@@ -77,7 +77,7 @@ jobs:
       - name: Assemble UEFI Fastboot Image (uefi.img)
         run: |
           mkdir -p out/firmware
-          curl -sL -o /tmp/mkbootimg.py https://raw.githubusercontent.com/aosp-mirror/platform_system_tools_mkbootimg/master/mkbootimg.py
+          curl -sL -o /tmp/mkbootimg.py https://raw.githubusercontent.com/LineageOS/android_system_tools_mkbootimg/lineage-21.0/mkbootimg.py
           gzip -c dts/pyxis.dtb > out/firmware/uefi-payload.gz
           touch /tmp/empty-ramdisk.cpio
           python3 /tmp/mkbootimg.py \
