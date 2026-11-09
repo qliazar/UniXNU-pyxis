@@ -42,7 +42,7 @@ def main():
 
     # Header v1 format (1648 bytes)
     header = struct.pack(
-        '<8sIIIIIIII512s16s1024sII',
+        '<8sIIIIIIIIII16s512s1024s',
         BOOT_MAGIC,
         kernel_size, kernel_addr,
         ramdisk_size, ramdisk_addr,
