@@ -1,4 +1,4 @@
-name: Build UniXNU-pyxis Boot Package & Drivers
+name: Build UniXNU-pyxis Boot Package & UEFI Image
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            device-tree-compiler mtools dosfstools python3 python3-pip uuid-dev nasm acpica-tools
+            device-tree-compiler mtools dosfstools python3 python3-pip uuid-dev nasm acpica-tools gzip
 
       - name: Inspect Device Tree & Environment
         run: |
@@ -74,11 +74,42 @@ jobs:
 
           ls -lh out/pyxis-esp.img
 
+      - name: Assemble UEFI Android Boot Image (uefi.img)
+        run: |
+          echo "=== Assembling uefi.img for Mi 9 Lite ==="
+          mkdir -p out/firmware
+
+          # Fetch AOSP mkbootimg utility
+          curl -sL -o /tmp/mkbootimg.py https://raw.githubusercontent.com/aosp-mirror/platform_system_tools_mkbootimg/master/mkbootimg.py
+
+          # Create UEFI binary placeholder with embedded DTB
+          cat dts/pyxis.dtb > out/firmware/uefi-kernel-payload.bin
+          gzip -c out/firmware/uefi-kernel-payload.bin > out/firmware/uefi-payload.gz
+
+          # Create empty ramdisk for fastboot boot compatibility
+          touch /tmp/empty-ramdisk.cpio
+
+          # Pack Android boot.img header v1 for SDM710
+          python3 /tmp/mkbootimg.py \
+            --kernel out/firmware/uefi-payload.gz \
+            --ramdisk /tmp/empty-ramdisk.cpio \
+            --base 0x80000000 \
+            --kernel_offset 0x00008000 \
+            --ramdisk_offset 0x01000000 \
+            --tags_offset 0x00000100 \
+            --pagesize 4096 \
+            --cmdline "console=ttyMSM0,115200n8 earlycon=msm_geni_serial,0x8c0000" \
+            --header_version 1 \
+            -o out/uefi.img
+
+          ls -lh out/uefi.img
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pyxis-boot-package
           path: |
+            out/uefi.img
             out/pyxis-esp.img
             board.toml
             configs/pyxis_defconfig
