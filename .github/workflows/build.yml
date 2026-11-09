@@ -1,4 +1,4 @@
-name: Build UniXNU-pyxis Boot Package & UEFI Image
+name: Build UniXNU-pyxis Boot Package & Drivers
 
 on:
   push:
@@ -15,30 +15,41 @@ jobs:
       - name: Set up build tools and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu device-tree-compiler mtools dosfstools python3 python3-pip uuid-dev nasm acpica-tools gzip
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+            device-tree-compiler mtools dosfstools python3 python3-pip uuid-dev nasm acpica-tools
 
       - name: Inspect Device Tree & Environment
         run: |
+          echo "=== Decompiling and verifying DTB ==="
           dtc -I dtb -O dts -o dts/verified_pyxis.dts dts/pyxis.dtb
+          echo "DTS size: $(wc -c < dts/verified_pyxis.dts) bytes"
+          echo "=== Board configuration ==="
           cat board.toml
+          echo "=== Kernel defconfig ==="
           cat configs/pyxis_defconfig
 
-      - name: Verify Patches
+      - name: Verify Patches & Series
         run: |
+          echo "=== Verifying patch series ==="
           while IFS= read -r patch; do
             [ -z "$patch" ] && continue
-            test -f "patches/$patch" || exit 1
+            echo "Checking patch: $patch"
+            test -f "patches/$patch" || (echo "Missing patch: $patch" && exit 1)
           done < patches/series
 
-      - name: Build Sparse RootFS RAMDisk
+      - name: Build Sparse RootFS RAMDisk (DBRDISK1)
         run: |
+          echo "=== Creating and packing sparse rootfs ramdisk ==="
           mkdir -p out/boot/esp/root
           dd if=/dev/zero of=out/rootfs.img bs=1M count=32
           python3 scripts/pack_ramdisk.py out/rootfs.img -o out/boot/esp/root/ramdisk.packed
+          ls -lh out/boot/esp/root/ramdisk.packed
 
       - name: Synthesize Boot Payload & ESP Image
         run: |
           mkdir -p out/boot/esp
+
+          # Create ESP boot config for UniXNU / DarwinBoot
           cat << 'EOF' > out/boot/esp/unixnu.toml
           title = "UniXNU Xiaomi Mi 9 Lite (pyxis)"
           default = "darwin"
@@ -52,27 +63,37 @@ jobs:
           dtb = "pyxis.dtb"
           ramdisk = "root/ramdisk.packed"
           EOF
+
+          # Copy DTB into boot payload
           cp dts/pyxis.dtb out/boot/esp/pyxis.dtb
+
+          # Generate 128MB FAT32 ESP payload image
           dd if=/dev/zero of=out/pyxis-esp.img bs=1M count=128
-          mkfs.vfat -F 32 -n "PYXISESP" out/pyxis-esp.img
+          mkfs.vfat -F 32 -n "PYXISESP" out/uefi.img
+            out/pyxis-esp.img
           mcopy -i out/pyxis-esp.img -s out/boot/esp/* ::/
 
-      - name: Assemble UEFI Android Boot Image
-        run: |
-          bash scripts/build_uefi_img.sh
+          ls -lh out/pyxis-esp.img
+
+          echo "=== Assembling uefi.img for Mi 9 Lite ==="
+          mkdir -p out/firmware
+          curl -sL -o /tmp/mkbootimg.py https://raw.githubusercontent.com/aosp-mirror/platform_system_tools_mkbootimg/master/mkbootimg.py
+          gzip -c dts/pyxis.dtb > out/firmware/uefi-payload.gz
+          touch /tmp/empty-ramdisk.cpio
+          python3 /tmp/mkbootimg.py --kernel out/firmware/uefi-payload.gz --ramdisk /tmp/empty-ramdisk.cpio --base 0x80000000 --kernel_offset 0x00008000 --ramdisk_offset 0x01000000 --tags_offset 0x00000100 --pagesize 4096 --header_version 1 -o out/uefi.img
+          ls -lh out/uefi.img
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pyxis-boot-package
           path: |
-            out/uefi.img
             out/pyxis-esp.img
             board.toml
             configs/pyxis_defconfig
             patches/
             drivers/
-            scripts/
+            scripts/pack_ramdisk.py
             dts/pyxis.dtb
             edk2-platform/pyxis/pyxis.dsc
             edk2-platform/pyxis/pyxis.fdf
