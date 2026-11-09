@@ -1,0 +1,47 @@
+"schema_version" = 2
+
+["board"]
+"name" = "pyxis"
+"soc" = "SDM710"
+"description" = "Xiaomi Mi 9 Lite"
+"kit" = "pyxis"
+"soc_source" = "sdm710"
+"os_profile" = "ios-16.5-20F66"
+
+["userdata"]
+"first_lba" = 3094592
+"last_lba" = 64007162
+"lba_bytes" = 4096
+
+["kernel"]
+"defconfig" = "pyxis_defconfig"
+"config_fragments" = ["arch:configs/common.config", "os:configs/ios.config"]
+"patch_series" = ["arch:patches/xnu/series"]
+
+["firmware"]
+"config" = "pyxis"
+"device_model" = "pyxis"
+"target_soc" = "sdm710"
+
+["payload"]
+"volume" = "PYXISESP"
+"size_mib" = 128
+"title" = "UniXNU-Darwin"
+"dram_base" = "0x80000000"
+"dram_size" = "0x180000000" # 6 GB
+"kernel_args" = ["-v", "serial=3", "debug=0x14e", "slide=0", "armcpu-spi-ipi=1", "-no_slto_panic"]
+
+["adt"."chosen"]
+"firmware-version" = "UniXNU-Pyxis-0.1"
+
+["adt"."gic"]
+["adt"."gic"."string"]
+"compatible" = "arm,gic-v3"
+["adt"."gic"."u64"]
+"reg" = [0x17A00000, 0x10000, 0x17A60000, 0x100000]
+
+["adt"."serial"]
+["adt"."serial"."string"]
+"compatible" = "qcom,geni-debug-uart"
+["adt"."serial"."u64"]
+"reg" = [0x008C0000, 0x6000]
