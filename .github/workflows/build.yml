@@ -16,7 +16,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            device-tree-compiler mtools dosfstools python3 python3-pip uuid-dev nasm acpica-tools gzip
+            device-tree-compiler mtools dosfstools python3 python3-pip uuid-dev nasm acpica-tools gzip binutils-aarch64-linux-gnu
 
       - name: Inspect Device Tree & Environment
         run: |
@@ -74,13 +74,18 @@ jobs:
 
           ls -lh out/pyxis-esp.img
 
+      - name: Build BootShim Binary
+        run: |
+          bash scripts/build_bootshim.sh
+
       - name: Assemble UEFI Fastboot Image (uefi.img)
         run: |
           mkdir -p out/firmware
-          gzip -c dts/pyxis.dtb > out/firmware/uefi-payload.gz
-                    python3 scripts/mkbootimg.py \
+          # Concatenate BootShim + DTB (allows ABL to jump to valid ARM64 code)
+          cat build/shim/BootShim.bin dts/pyxis.dtb > out/firmware/uefi-kernel-payload.bin
+          gzip -c out/firmware/uefi-kernel-payload.bin > out/firmware/uefi-payload.gz
+          python3 scripts/mkbootimg.py \
             --kernel out/firmware/uefi-payload.gz \
-            --ramdisk /tmp/empty-ramdisk.cpio \
             --base 0x80000000 \
             --kernel_offset 0x00008000 \
             --ramdisk_offset 0x01000000 \
@@ -101,7 +106,8 @@ jobs:
             configs/pyxis_defconfig
             patches/
             drivers/
-            scripts/pack_ramdisk.py
+            scripts/
+            firmware/
             dts/pyxis.dtb
             edk2-platform/pyxis/pyxis.dsc
             edk2-platform/pyxis/pyxis.fdf

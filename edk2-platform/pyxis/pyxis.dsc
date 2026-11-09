@@ -14,7 +14,8 @@
   gArmTokenSpaceGuid.PcdSystemMemoryBase|0x80000000
   gArmTokenSpaceGuid.PcdSystemMemorySize|0x180000000
 
-  # Framebuffer (Mi 9 Lite panel: 1080 x 2340 x 32bpp)
+  # Continuous Splash Framebuffer (Mi 9 Lite ABL cont_splash_region @ 0x9C000000)
+  gQcomTokenSpaceGuid.PcdMipiFrameBufferAddress|0x9C000000
   gQcomTokenSpaceGuid.PcdMipiFrameBufferWidth|1080
   gQcomTokenSpaceGuid.PcdMipiFrameBufferHeight|2340
   gQcomTokenSpaceGuid.PcdMipiFrameBufferPixelBpp|32

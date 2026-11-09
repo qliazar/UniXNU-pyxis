@@ -17,6 +17,8 @@
 "width" = 1080
 "height" = 2340
 "bpp" = 32
+"framebuffer_base" = "0x9C000000"
+"framebuffer_size" = "0x02300000"
 "orientation" = 0
 
 ["touch"]
