@@ -37,12 +37,14 @@ jobs:
             test -f "patches/$patch" || (echo "Missing patch: $patch" && exit 1)
           done < patches/series
 
-      - name: Fetch and Build DarwinBoot
+      - name: Build Sparse RootFS RAMDisk (DBRDISK1)
         run: |
-          echo "=== Fetching UniXNU/DarwinBoot ==="
-          git clone --depth=1 https://github.com/UniXNU/DarwinBoot.git /tmp/DarwinBoot
-          echo "DarwinBoot sources ready at /tmp/DarwinBoot"
-          mkdir -p out/boot/esp/EFI/BOOT
+          echo "=== Creating and packing sparse rootfs ramdisk ==="
+          mkdir -p out/boot/esp/root
+          # Generate base placeholder rootfs (sparse)
+          dd if=/dev/zero of=out/rootfs.img bs=1M count=32
+          python3 scripts/pack_ramdisk.py out/rootfs.img -o out/boot/esp/root/ramdisk.packed
+          ls -lh out/boot/esp/root/ramdisk.packed
 
       - name: Synthesize Boot Payload & ESP Image
         run: |
@@ -58,8 +60,9 @@ jobs:
           name = "darwin"
           title = "Darwin / XNU (iOS 16.5)"
           loader = "DarwinBoot.efi"
-          args = "-v serial=3 debug=0x14e armcpu-spi-ipi=1 -no_slto_panic"
+          args = "-v serial=3 debug=0x14e armcpu-spi-ipi=1 -no_slto_panic native-ram-root=1"
           dtb = "pyxis.dtb"
+          ramdisk = "root/ramdisk.packed"
           EOF
 
           # Copy DTB into boot payload
@@ -81,6 +84,7 @@ jobs:
             board.toml
             configs/pyxis_defconfig
             patches/
+            scripts/pack_ramdisk.py
             dts/pyxis.dtb
             edk2-platform/pyxis/pyxis.dsc
             edk2-platform/pyxis/pyxis.fdf
