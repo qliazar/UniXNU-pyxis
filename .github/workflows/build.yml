@@ -1,4 +1,4 @@
-name: Build UniXNU-pyxis Boot Package & Drivers
+name: Build UniXNU-pyxis Boot Package & UEFI Image
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            device-tree-compiler mtools dosfstools python3 python3-pip uuid-dev nasm acpica-tools
+            device-tree-compiler mtools dosfstools python3 python3-pip uuid-dev nasm acpica-tools gzip
 
       - name: Inspect Device Tree & Environment
         run: |
@@ -69,28 +69,10 @@ jobs:
 
           # Generate 128MB FAT32 ESP payload image
           dd if=/dev/zero of=out/pyxis-esp.img bs=1M count=128
-          mkfs.vfat -F 32 -n "PYXISESP" out/uefi.img
-            out/pyxis-esp.img
+          mkfs.vfat -F 32 -n "PYXISESP" out/pyxis-esp.img
           mcopy -i out/pyxis-esp.img -s out/boot/esp/* ::/
 
-          ls -lh out/uefi.img
-            out/pyxis-esp.img
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pyxis-boot-package
-          path: |
-            out/uefi.img
-            out/pyxis-esp.img
-            board.toml
-            configs/pyxis_defconfig
-            patches/
-            drivers/
-            scripts/pack_ramdisk.py
-            dts/pyxis.dtb
-            edk2-platform/pyxis/pyxis.dsc
-            edk2-platform/pyxis/pyxis.fdf
+          ls -lh out/pyxis-esp.img
 
       - name: Assemble UEFI Fastboot Image (uefi.img)
         run: |
@@ -109,3 +91,19 @@ jobs:
             --header_version 1 \
             -o out/uefi.img
           ls -lh out/uefi.img
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyxis-boot-package
+          path: |
+            out/uefi.img
+            out/pyxis-esp.img
+            board.toml
+            configs/pyxis_defconfig
+            patches/
+            drivers/
+            scripts/pack_ramdisk.py
+            dts/pyxis.dtb
+            edk2-platform/pyxis/pyxis.dsc
+            edk2-platform/pyxis/pyxis.fdf
