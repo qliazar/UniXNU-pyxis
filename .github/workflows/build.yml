@@ -1,4 +1,4 @@
-name: Build UniXNU-pyxis Boot Package & Firmware
+name: Build UniXNU-pyxis Boot Package & Kernel Specs
 
 on:
   push:
@@ -23,8 +23,19 @@ jobs:
           echo "=== Decompiling and verifying DTB ==="
           dtc -I dtb -O dts -o dts/verified_pyxis.dts dts/pyxis.dtb
           echo "DTS size: $(wc -c < dts/verified_pyxis.dts) bytes"
-          echo "Board configuration:"
+          echo "=== Board configuration ==="
           cat board.toml
+          echo "=== Kernel defconfig ==="
+          cat configs/pyxis_defconfig
+
+      - name: Verify Patches & Series
+        run: |
+          echo "=== Verifying patch series ==="
+          while IFS= read -r patch; do
+            [ -z "$patch" ] && continue
+            echo "Checking patch: $patch"
+            test -f "patches/$patch" || (echo "Missing patch: $patch" && exit 1)
+          done < patches/series
 
       - name: Fetch and Build DarwinBoot
         run: |
@@ -68,6 +79,8 @@ jobs:
           path: |
             out/pyxis-esp.img
             board.toml
+            configs/pyxis_defconfig
+            patches/
             dts/pyxis.dtb
             edk2-platform/pyxis/pyxis.dsc
             edk2-platform/pyxis/pyxis.fdf

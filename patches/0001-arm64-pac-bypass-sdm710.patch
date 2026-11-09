@@ -1,0 +1,16 @@
+--- a/osfmk/arm64/status.c
++++ b/osfmk/arm64/status.c
+@@ -214,6 +214,14 @@ machine_thread_state_initialize(
+ 	thread_t thread)
+ {
+ 	arm_saved_state_t *state = find_user_regs(thread);
++
++	/*
++	 * SDM710 (ARMv8.0-A) lacks Pointer Authentication (PAC).
++	 * Strip pac mask requirement and permit standard arm64 register frames.
++	 */
++#if defined(CONFIG_ARM64E_DISABLED) || !__has_feature(ptrauth_calls)
++	state->ss_64.flags &= ~ARM_SAVED_STATE64_FLAGS_PAC_MASK;
++#endif
+ 	return KERN_SUCCESS;
+ }
